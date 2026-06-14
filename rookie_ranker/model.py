@@ -85,6 +85,7 @@ def predict(model, df):
         df_skill = df_skill[df_skill["conference"].isin(FBS_CONFERENCES)].copy()
     player_names = df_skill["player"].tolist() if "player" in df_skill.columns else []
     conferences = df_skill["conference"].tolist() if "conference" in df_skill.columns else []
+    teams = df_skill["team"].tolist() if "team" in df_skill.columns else []
 
     df_features = prepare_features(df)
     predictions = model.predict(df_features)
@@ -96,6 +97,8 @@ def predict(model, df):
     }
     if conferences:
         out["conference"] = conferences
+    if teams:
+        out["team"] = teams
     return pd.DataFrame(out).sort_values("predicted_fantasy_points", ascending=False).reset_index(drop=True)
 
 

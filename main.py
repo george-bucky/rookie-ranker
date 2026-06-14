@@ -5,11 +5,12 @@ import joblib
 import pandas as pd
 from datetime import datetime
 
-from rookie_ranker.nfl_data import load_nfl_data
+from rookie_ranker.nfl_data import load_nfl_data, load_draft_order
 from rookie_ranker.college_data import (
     load_college_data,
     pivot_college_stats,
     merge_college_and_nfl,
+    match_draft_picks,
     get_multi_season_players,
 )
 from rookie_ranker.model import load_training_data, train, evaluate, save_predictions, cross_validate, load_model, predict, explain_player
@@ -194,10 +195,16 @@ def run_predict(force=False):
     df_prospects = df_prospects[df_prospects["playerId"].isin(returning)]
     print(f"Filtered to {len(df_prospects)} prospects with 3+ college seasons.")
 
-    draft_proj_path = f"data/raw/draft_projections_{PREDICT_YEAR}.csv"
-    if os.path.isfile(draft_proj_path):
-        df_proj = pd.read_csv(draft_proj_path)[["player", "pick"]]
-        df_merged = df_prospects.merge(df_proj, on="player", how="left")
+    draft_order_path = f"data/raw/draft_order_{PREDICT_YEAR}.csv"
+    if not os.path.isfile(draft_order_path) or force:
+        print(f"Fetching {PREDICT_YEAR} draft order...")
+        df_draft = load_draft_order(PREDICT_YEAR)
+        df_draft.to_csv(draft_order_path, index=False)
+    else:
+        df_draft = pd.read_csv(draft_order_path)
+
+    if not df_draft.empty:
+        df_merged = match_draft_picks(df_prospects, df_draft)
         has_pick = df_merged["pick"].notna()
         n_with_pick = has_pick.sum()
 
@@ -216,7 +223,7 @@ def run_predict(force=False):
         rankings["model"] = "no_pick"
 
     rankings["position_rank"] = (
-        rankings.groupby("position")["predicted_fantasy_points"]
+        rankings.groupby(["position", "model"])["predicted_fantasy_points"]
         .rank(ascending=False)
         .astype(int)
     )

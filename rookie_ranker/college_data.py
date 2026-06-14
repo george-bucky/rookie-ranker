@@ -69,6 +69,30 @@ def get_player_first_seasons(years):
     return all_seasons.groupby("playerId")["season"].min().rename("first_season")
 
 
+def match_draft_picks(df_prospects, df_draft, threshold=85):
+    """
+    Attach pick number and team to prospects by fuzzy-matching player names
+    against a draft order (data/raw/draft_order_*.csv). Prospects with no
+    match above `threshold` keep NaN pick/team (no-pick model).
+    """
+    prospect_names = df_prospects["player"].tolist()
+    df_draft = df_draft.copy()
+
+    def best_match(name):
+        result = process.extractOne(name, prospect_names, score_cutoff=threshold)
+        return result[0] if result else None
+
+    df_draft["matched_name"] = df_draft["pfr_player_name"].apply(best_match)
+    df_draft = df_draft.dropna(subset=["matched_name"])
+
+    return df_prospects.merge(
+        df_draft[["matched_name", "pick", "team"]],
+        left_on="player",
+        right_on="matched_name",
+        how="left",
+    ).drop(columns=["matched_name"])
+
+
 def merge_college_and_nfl(college_data, nfl_data):
     college_names = college_data["player"].tolist()
     nfl_data = nfl_data.copy()

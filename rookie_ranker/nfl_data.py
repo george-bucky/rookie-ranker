@@ -22,6 +22,16 @@ def select_draft_columns(df):
     return df[["season", "round", "pick", "position", "pfr_player_name", "gsis_id"]]
 
 
+SKILL_POSITIONS = ["QB", "RB", "WR", "TE", "FB"]
+
+
+def load_draft_order(year):
+    """Pick number, team, and player name for skill-position picks in a draft year."""
+    df = load_draft_picks(year)
+    df = df[df["position"].isin(SKILL_POSITIONS)]
+    return df[["pick", "team", "pfr_player_name", "position"]].reset_index(drop=True)
+
+
 def merge_draft_and_fantasy(draft_picks, fantasy_points):
     return pd.merge(
         draft_picks,

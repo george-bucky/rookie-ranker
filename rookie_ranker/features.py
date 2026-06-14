@@ -12,6 +12,7 @@ ARTIFACT_COLUMNS = [
     "season_y",
     "pfr_player_name",
     "conference",
+    "team",
 ]
 
 # Allowlist — only these positions are kept. Anything else is filtered out.
