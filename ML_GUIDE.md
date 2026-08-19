@@ -127,7 +127,7 @@ R² is easier to interpret. It answers: "How much of the variation in rookie fan
 - R² = 0.0: the model is no better than just predicting the average for everyone
 - R² < 0: the model is actively worse than predicting the average
 
-Our best no-pick model sits around **0.10**. That means we're explaining about 10% of the variance in rookie performance. That sounds low — and it is — but predicting rookie NFL performance from college stats alone is genuinely one of the hardest forecasting problems in sports. Even NFL scouts with years of experience and film study get this wrong constantly.
+The prototype historically reported a no-pick result around **0.10**, but that number is unverified until it is reproduced. If reproduced, it would mean the model explains about 10% of the variance in rookie performance. That sounds low — and it is — but predicting rookie NFL performance from college stats alone is genuinely one of the hardest forecasting problems in sports. Even NFL scouts with years of experience and film study get this wrong constantly.
 
 ### Cross-Validation
 
@@ -203,7 +203,7 @@ We train two versions:
 
 Why does this matter? Draft position is one of the strongest predictors of NFL success — not because being picked early makes you better, but because NFL teams have more scouting information than we do. Their collective judgment, expressed through draft order, captures things our college stats miss: combine athleticism, injury history, scheme fit, character, football IQ.
 
-The with-pick model has CV R² of 0.373, more than triple the no-pick model's 0.099. That gap tells you how much information is in draft position that our college stats don't capture.
+The ML guide historically reported CV R² of 0.373 for the with-pick model and 0.099 for the no-pick model from a different prototype run than the README. These numbers are unverified until reproduced; if reproduced, the gap would show how much information draft position adds beyond the college stats.
 
 ---
 
@@ -237,7 +237,7 @@ Where it falls short:
 - QBs from non-traditional systems (option, RPO-heavy)
 - Players with limited college exposure (1-2 seasons)
 
-A CV R² of 0.10 is honest: the model explains about 10% of what makes rookies successful. The other 90% is things we can't measure, things that haven't happened yet, and genuine unpredictability. That's what makes it fun.
+The prototype's unverified CV R² of 0.10 would mean the model explains about 10% of what makes rookies successful. The other 90% would be things we can't measure, things that haven't happened yet, and genuine unpredictability. That's what makes it fun.
 
 ---
 

@@ -14,7 +14,16 @@ Predicts a rookie's fantasy points in their first NFL season based on their fina
 
 **Training data:** 5 years (2020–2024 college → 2021–2025 NFL rookie seasons), ~1086 players
 **Models:** Two variants — one with draft pick, one without (for pre-draft use)
-**Current accuracy:** CV R² = 0.41 (with pick), 0.24 (no pick)
+**Historical accuracy (unverified):** This README previously reported CV R² = 0.41 (with pick) and 0.24 (no pick), while the ML guide records different results from another prototype run. None of these results has been reproduced by the offline test suite.
+
+## Local tests
+
+The baseline tests use generated fixtures only and do not require API credentials or network access.
+
+```bash
+uv sync --dev
+uv run pytest
+```
 
 ## Usage
 ```bash
