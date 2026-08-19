@@ -1,0 +1,4 @@
+draft_season,overall_pick,resolution,cfbd_player_id,reason,evidence
+2024,2,quarantine,,Two compatible exact-name candidates require manual review,Fixture contains CFBD IDs 201 and 202
+2024,3,match,301,Reviewed source confirms a name variant,Fixture links the drafted RB to CFBD ID 301
+2024,4,quarantine,,Only an incompatible-position player has this exact name,Fixture lists Terry Tight as TE while draft position is WR
