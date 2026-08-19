@@ -1,0 +1,9 @@
+season,round,pick,team,position,pfr_player_name,gsis_id,pfr_player_id,cfb_player_id
+2023,1,1,AAA,QB,Alex Accurate,G001,AAcc00,1001
+2023,1,2,BBB,RB,Riley Runner,,RRun00,1002
+2023,1,3,CCC,WR,Casey Catcher,,,1003
+2023,2,40,DDD,TE,Terry Tightend,G004,TTig00,1004
+2023,7,220,EEE,FB,Frank Fullback,G005,FFul00,1005
+2023,7,221,FFF,LB,Les Linebacker,G006,LLin00,1006
+2025,1,5,GGG,WR,Pat Present,G007,PPre00,1007
+2026,1,6,HHH,RB,Future Runner,G008,FRun00,1008

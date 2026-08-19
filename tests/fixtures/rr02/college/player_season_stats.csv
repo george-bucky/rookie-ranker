@@ -1,0 +1,42 @@
+season,playerId,player,position,team,conference,category,statType,stat
+2022,101,Jose Smith Jr.,QB,Alpha State,SEC,passing,ATT,100
+2022,101,Jose Smith Jr.,QB,Alpha State,SEC,passing,YDS,700
+2022,101,Jose Smith Jr.,QB,Alpha State,SEC,passing,TD,7
+2022,101,Jose Smith Jr.,QB,Alpha State,SEC,rushing,CAR,20
+2022,101,Jose Smith Jr.,QB,Alpha State,SEC,rushing,YDS,100
+2022,101,Jose Smith Jr.,QB,Alpha State,SEC,rushing,TD,2
+2022,101,Jose Smith Jr.,QB,Alpha State,SEC,receiving,REC,0
+2022,101,Jose Smith Jr.,QB,Alpha State,SEC,receiving,YDS,0
+2022,101,Jose Smith Jr.,QB,Alpha State,SEC,receiving,TD,0
+2023,101,Jose Smith Jr.,QB,Alpha State,SEC,passing,ATT,100
+2023,101,Jose Smith Jr.,QB,Alpha State,SEC,passing,YDS,800
+2023,101,Jose Smith Jr.,QB,Alpha State,SEC,passing,TD,8
+2023,101,Jose Smith Jr.,QB,Alpha State,SEC,rushing,CAR,30
+2023,101,Jose Smith Jr.,QB,Alpha State,SEC,rushing,YDS,150
+2023,101,Jose Smith Jr.,QB,Alpha State,SEC,rushing,TD,3
+2023,101,Jose Smith Jr.,QB,Alpha State,SEC,receiving,REC,0
+2023,101,Jose Smith Jr.,QB,Alpha State,SEC,receiving,YDS,0
+2023,101,Jose Smith Jr.,QB,Alpha State,SEC,receiving,TD,0
+2023,101,Jose Smith Jr.,QB,Beta Tech,Big Ten,passing,ATT,50
+2023,101,Jose Smith Jr.,QB,Beta Tech,Big Ten,passing,YDS,500
+2023,101,Jose Smith Jr.,QB,Beta Tech,Big Ten,passing,TD,4
+2023,101,Jose Smith Jr.,QB,Beta Tech,Big Ten,rushing,CAR,10
+2023,101,Jose Smith Jr.,QB,Beta Tech,Big Ten,rushing,YDS,100
+2023,101,Jose Smith Jr.,QB,Beta Tech,Big Ten,rushing,TD,1
+2023,101,Jose Smith Jr.,QB,Beta Tech,Big Ten,receiving,REC,0
+2023,101,Jose Smith Jr.,QB,Beta Tech,Big Ten,receiving,YDS,0
+2023,101,Jose Smith Jr.,QB,Beta Tech,Big Ten,receiving,TD,0
+2024,101,Jose Smith Jr.,QB,Pro Leakage,NFL,passing,ATT,999
+2024,101,Jose Smith Jr.,QB,Pro Leakage,NFL,passing,YDS,9999
+2023,201,Chris Jones,WR,East College,ACC,receiving,REC,40
+2023,201,Chris Jones,WR,East College,ACC,receiving,YDS,600
+2023,201,Chris Jones,WR,East College,ACC,receiving,TD,5
+2023,202,Chris Jones,WR,West College,Big 12,receiving,REC,50
+2023,202,Chris Jones,WR,West College,Big 12,receiving,YDS,700
+2023,202,Chris Jones,WR,West College,Big 12,receiving,TD,6
+2023,301,Johnathan Doe,RB,North College,SEC,rushing,CAR,180
+2023,301,Johnathan Doe,RB,North College,SEC,rushing,YDS,900
+2023,301,Johnathan Doe,RB,North College,SEC,rushing,TD,9
+2023,401,Terry Tight,TE,South College,SEC,receiving,REC,35
+2023,401,Terry Tight,TE,South College,SEC,receiving,YDS,500
+2023,401,Terry Tight,TE,South College,SEC,receiving,TD,4
