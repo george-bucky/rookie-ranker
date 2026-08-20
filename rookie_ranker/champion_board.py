@@ -774,6 +774,13 @@ def build_rookie_board(
     players = []
     for index, row in current.iterrows():
         warnings = _warnings(row.get("data_quality_warnings"))
+        if _clean_optional(row.get("identity_match_status")) == "quarantined":
+            reason = _clean_optional(row.get("quarantine_reason"))
+            warning = "college identity quarantined"
+            warnings.append(f"{warning}: {reason}" if reason else warning)
+        college_status = _clean_optional(row.get("college_stats_status"))
+        if college_status is not None and college_status != "observed":
+            warnings.append(f"college stats status: {college_status}")
         unavailable_targets = [
             target
             for target in TARGETS

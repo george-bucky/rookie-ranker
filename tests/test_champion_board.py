@@ -353,6 +353,34 @@ def test_board_publication_is_valid_deterministic_and_ordered_by_three_year(tmp_
     ]
 
 
+def test_board_derives_warnings_from_identity_and_college_status():
+    training = feature_rows()
+    current = current_class().drop(columns=["data_quality_warnings"])
+    current.loc[0, "quarantine_reason"] = "reviewed live identity gap"
+    current.loc[0, "college_stats_status"] = "missing"
+    current.loc[1, "identity_match_status"] = "exact"
+    current.loc[1, "identity_match_method"] = "normalized_name_position"
+    current.loc[1, "college_stats_status"] = "missing"
+
+    board, _ = build_rookie_board(
+        {"three_year_ppr_points": training, "rookie_year_ppr_points": training},
+        current,
+        current_evidence(current),
+        publication_metadata(),
+    )
+    players = {player.canonical_id: player for player in board.players}
+
+    quarantined = players[str(current.loc[0, "canonical_id"])]
+    assert quarantined.confidence not in {"high", "medium"}
+    assert {
+        "college identity quarantined: reviewed live identity gap",
+        "college stats status: missing",
+    }.issubset(quarantined.data_quality_warnings)
+    missing = players[str(current.loc[1, "canonical_id"])]
+    assert missing.confidence not in {"high", "medium"}
+    assert "college stats status: missing" in missing.data_quality_warnings
+
+
 def test_incomplete_or_mismatched_current_cohort_is_rejected():
     training = feature_rows()
     complete = current_class()
