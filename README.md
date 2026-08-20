@@ -25,6 +25,10 @@ uv sync --dev
 uv run pytest
 ```
 
+The honest post-draft challenger, target-specific champion gate, residual
+intervals, and deterministic board rules are documented in
+[`docs/champion-board.md`](docs/champion-board.md).
+
 ## Usage
 ```bash
 # Fetch data + train both models

@@ -466,6 +466,13 @@ def _canonicalize(value: Any) -> Any:
 
 def _board_payload(board: RookieBoard) -> dict[str, Any]:
     payload = board.model_dump(mode="json", exclude_none=True)
+    # Evaluation fields are required-but-nullable in the public schema. Keep
+    # unavailable held-out evidence explicit without adding null optional IDs.
+    for target in ("three_year_ppr_points", "rookie_year_ppr_points"):
+        summary = getattr(board.metadata.evaluation_summary, target)
+        for field_name in ("ndcg_at_24", "mae", "interval_coverage", "mean_interval_width"):
+            if getattr(summary, field_name) is None:
+                payload["metadata"]["evaluation_summary"][target][field_name] = None
     payload["players"] = sorted(payload["players"], key=lambda row: (row["base_rank"], row["canonical_id"]))
     for player in payload["players"]:
         player["data_quality_warnings"] = sorted(player["data_quality_warnings"])
