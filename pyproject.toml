@@ -17,6 +17,9 @@ dependencies = [
     "shap>=0.44",
 ]
 
+[project.scripts]
+rookie-ranker-publish = "rookie_ranker.publication_cli:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3",

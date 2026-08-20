@@ -14,6 +14,10 @@ rookie-board-<class-year>.json
 rookie-board-<class-year>.manifest.json
 ```
 
+RR-05's offline publisher also writes a versioned `.audit.json` evidence
+sidecar. It is not part of the RR-04 consumer handoff or schema; consumers still
+validate and read exactly the three files above.
+
 `rookie-board.schema.json` is the public Draft 2020-12 JSON Schema. The board is
 the public data artifact. The manifest contains the SHA-256 of the exact board
 bytes; the board never contains its own checksum.
