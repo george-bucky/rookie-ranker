@@ -29,6 +29,11 @@ The honest post-draft challenger, target-specific champion gate, residual
 intervals, and deterministic board rules are documented in
 [`docs/champion-board.md`](docs/champion-board.md).
 
+The validated 2026 post-draft handoff is published under
+[`artifacts/rookie_boards/2026`](artifacts/rookie_boards/2026). It contains only
+derived predictions, the public schema, and an external checksum manifest; raw
+provider responses and credentials are not committed.
+
 ## Usage
 ```bash
 # Fetch data + train both models
