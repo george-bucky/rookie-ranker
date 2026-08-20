@@ -772,7 +772,9 @@ def build_rookie_board(
     ordering = pd.DataFrame(
         {
             "canonical_id": current["canonical_id"].astype(str),
-            "prediction": forecasts["rookie_year_ppr_points"]["p50"].to_numpy(dtype=float),
+            "prediction": forecasts["rookie_year_ppr_points"]["p50"].map(
+                _published_number
+            ),
         }
     ).sort_values(["prediction", "canonical_id"], ascending=[False, True], kind="stable")
     base_rank = {canonical_id: rank for rank, canonical_id in enumerate(ordering["canonical_id"], start=1)}

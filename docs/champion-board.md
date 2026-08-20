@@ -60,7 +60,8 @@ confidence `unavailable`; missing three-year history does not.
 
 ## Frozen rank, tier, and confidence rules
 
-- Base rank: selected rookie-year P50 descending, then `canonical_id` ascending.
+- Base rank: selected rookie-year P50 rounded to the artifact's four-decimal
+  precision descending, then `canonical_id` ascending.
 - Position rank: base-rank order within position.
 - Tier: `1 + floor((base_rank - 1) / 12)`; each consecutive block of 12 ranks is
   one tier.
@@ -76,3 +77,36 @@ confidence `unavailable`; missing three-year history does not.
 `publish_rookie_board` writes only the RR-04 schema, deterministic JSON board,
 and external checksum manifest. It does not fetch live data, serialize a model,
 or schedule/upload output.
+
+## Offline publication and audit evidence
+
+The checked-in publisher consumes a retained RR-02 truth table and run manifest;
+it never fetches providers:
+
+```bash
+python -m rookie_ranker.publication_cli \
+  --training-table /private/path/training-table.csv \
+  --training-table-sha256 EXPECTED_SHA256 \
+  --run-manifest /private/path/run-manifest.json \
+  --run-manifest-sha256 EXPECTED_SHA256 \
+  --draft-class 2026 \
+  --draft-event-date 2026-04-25 \
+  --data-cutoff 2026-08-20 \
+  --outcomes-cutoff-season 2025 \
+  --output-dir artifacts/rookie_boards/2026
+```
+
+Publication fails before fitting unless the repository is clean, both explicit
+input hashes match, the truth-table output hash/size/row count and coverage agree
+with the RR-02 manifest, the exact RR-02 source set and notices are present, and
+source hashes, versions, schema metadata, years, class, and outcome cutoff are
+valid. Generation time is derived directly from the RR-02 manifest so a caller
+cannot rewrite that provenance.
+
+Alongside the three unchanged RR-04 handoff files, the command writes
+`rookie-board-<class>.audit.json`. This versioned, deterministic evidence file is
+not part of the public RR-04 schema. It records both input hashes, the RR-02 and
+board producer commits, source versions, output hashes, both models' complete
+macro, pooled, yearly, position, and interval reports, strict fold wins, and all
+champion and integrity gates. It contains no training rows, provider responses,
+credentials, or serialized model.

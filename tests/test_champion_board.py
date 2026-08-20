@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, date, datetime
+import json
 from pathlib import Path
 
 import numpy as np
@@ -26,6 +28,19 @@ from rookie_ranker.champion_board import (
     select_champion,
 )
 from rookie_ranker.college_features import FEATURE_NAMES
+from rookie_ranker.publication_cli import (
+    AUDIT_SCHEMA_VERSION,
+    OfflinePublicationConfig,
+    PublicationInputError,
+    publish_offline,
+)
+from rookie_ranker.run_manifest import (
+    SOURCE_NOTICES,
+    build_coverage_report,
+    sha256_bytes,
+    sha256_file,
+    write_manifest,
+)
 
 
 def feature_rows(years=range(2013, 2024), players_per_year=8):
@@ -427,6 +442,7 @@ def test_confidence_uses_published_quantiles_at_median_boundary(tmp_path, monkey
     current["identity_match_status"] = "exact"
     current["identity_match_method"] = "normalized_name_position"
     raw_widths = np.array([1.00001, 1.00002, 1.00003])
+    raw_points = np.array([0.50003, 0.50004, 0.5])
 
     def forecasts(_training, supplied_current, evaluation):
         widths = (
@@ -437,7 +453,11 @@ def test_confidence_uses_published_quantiles_at_median_boundary(tmp_path, monkey
         return pd.DataFrame(
             {
                 "p10": np.zeros(len(supplied_current)),
-                "p50": np.full(len(supplied_current), 0.5),
+                "p50": (
+                    raw_points
+                    if evaluation.target == "rookie_year_ppr_points"
+                    else np.full(len(supplied_current), 0.5)
+                ),
                 "p90": widths,
                 "interval_status": "available",
             },
@@ -463,6 +483,16 @@ def test_confidence_uses_published_quantiles_at_median_boundary(tmp_path, monkey
     boundary_id = str(current.loc[2, "canonical_id"])
     boundary = next(player for player in published.players if player.canonical_id == boundary_id)
 
+    first_id = str(current.loc[0, "canonical_id"])
+    second_id = str(current.loc[1, "canonical_id"])
+    ranks = {player.canonical_id: player.base_rank for player in published.players}
+    assert raw_points[1] > raw_points[0]
+    assert ranks[first_id] < ranks[second_id]
+    assert next(
+        player for player in published.players if player.canonical_id == first_id
+    ).rookie_year_ppr.p50 == next(
+        player for player in published.players if player.canonical_id == second_id
+    ).rookie_year_ppr.p50
     assert raw_widths[2] > float(np.median(raw_widths))
     assert published_widths[boundary_id] == published_median
     assert boundary.confidence == "high"
@@ -471,6 +501,225 @@ def test_confidence_uses_published_quantiles_at_median_boundary(tmp_path, monkey
         == ("high" if published_widths[player.canonical_id] <= published_median else "medium")
         for player in published.players
     )
+
+
+def offline_publication_inputs(tmp_path):
+    generated_at = "2026-05-01T08:00:00-04:00"
+    training = feature_rows(years=range(2013, 2027)).drop(
+        columns=["data_quality_warnings"]
+    )
+    training["gsis_id"] = training["canonical_id"]
+    three_immature = training["draft_season"].gt(2023)
+    rookie_immature = training["draft_season"].gt(2025)
+    training.loc[three_immature, "three_year_ppr_points"] = np.nan
+    training.loc[three_immature, "three_year_target_status"] = "immature"
+    training.loc[rookie_immature, "rookie_year_ppr_points"] = np.nan
+    training.loc[rookie_immature, "rookie_target_status"] = "immature"
+    input_dir = tmp_path / "inputs"
+    input_dir.mkdir()
+    training_path = input_dir / "training-table.csv"
+    training.to_csv(
+        training_path, index=False, lineterminator="\n", float_format="%.10g"
+    )
+    source_names = (
+        "nflverse_draft_picks",
+        "nflverse_player_stats_reg",
+        "college_football_data_player_season",
+        "identity_overrides",
+    )
+    source_years = {
+        "nflverse_draft_picks": list(range(2013, 2027)),
+        "identity_overrides": list(range(2013, 2027)),
+        "nflverse_player_stats_reg": list(range(2013, 2026)),
+        "college_football_data_player_season": list(range(2012, 2026)),
+    }
+    sources = []
+    for index, name in enumerate(source_names, start=1):
+        content_hash = str(index) * 64
+        sources.append(
+            {
+                "name": name,
+                "source_url": f"https://example.test/{name}",
+                "source_version": f"sha256:{content_hash}",
+                "loader_version": "fixture-v1",
+                "fetched_at_utc": generated_at,
+                "query_years": source_years[name],
+                "row_count": len(training),
+                "content_sha256": content_hash,
+                "schema": {
+                    "columns": [{"name": "fixture", "dtype": "str"}],
+                    "sha256": sha256_bytes(
+                        b'[{"dtype":"str","name":"fixture"}]'
+                    ),
+                },
+            }
+        )
+    manifest = {
+        "schema_version": "1.0",
+        "generated_at_utc": generated_at,
+        "producer_commit": "f111442868c81b102729563f01149f214faeb119",
+        "arguments": {
+            "draft_years": list(range(2013, 2027)),
+            "college_years": list(range(2012, 2026)),
+            "outcomes_through_year": 2025,
+        },
+        "sources": sources,
+        "outputs": [
+            {
+                "filename": training_path.name,
+                "sha256": sha256_file(training_path),
+                "byte_count": training_path.stat().st_size,
+                "row_count": len(training),
+            }
+        ],
+        "coverage": build_coverage_report(training).to_dict("records"),
+        "source_notices": list(SOURCE_NOTICES.values()),
+    }
+    manifest_path = input_dir / "run-manifest.json"
+    write_manifest(manifest, manifest_path)
+    config = OfflinePublicationConfig(
+        training_table=training_path,
+        training_table_sha256=sha256_file(training_path),
+        run_manifest=manifest_path,
+        run_manifest_sha256=sha256_file(manifest_path),
+        draft_class=2026,
+        draft_event_date=date(2026, 4, 25),
+        data_cutoff=date(2026, 4, 30),
+        outcomes_cutoff_season=2025,
+        output_dir=tmp_path / "first",
+    )
+    return config, manifest
+
+
+def test_offline_publication_is_deterministic_and_audited(tmp_path, monkeypatch):
+    config, _ = offline_publication_inputs(tmp_path)
+    producer_commit = "a222442868c81b102729563f01149f214faeb119"
+    monkeypatch.setattr(
+        "rookie_ranker.publication_cli._producer_commit", lambda: producer_commit
+    )
+
+    first = publish_offline(config)
+    second = publish_offline(replace(config, output_dir=tmp_path / "second"))
+
+    assert set(first) == {"artifact", "manifest", "schema", "audit"}
+    assert all(first[name].read_bytes() == second[name].read_bytes() for name in first)
+    audit = json.loads(first["audit"].read_text())
+    assert audit["audit_schema_version"] == AUDIT_SCHEMA_VERSION
+    assert audit["generated_at"] == "2026-05-01T12:00:00Z"
+    assert audit["producer_commit"] == producer_commit
+    assert audit["inputs"]["training_table"]["sha256"] == config.training_table_sha256
+    assert audit["inputs"]["run_manifest"]["sha256"] == config.run_manifest_sha256
+    for target in ("three_year_ppr_points", "rookie_year_ppr_points"):
+        evidence = audit["targets"][target]
+        assert set(evidence["models"]) == {"draft_capital", "random_forest"}
+        assert {
+            "eligible_fold_count",
+            "strict_win_count",
+            "strict_win_rate",
+            "challenger_ndcg_24",
+            "baseline_ndcg_24",
+            "challenger_mae",
+            "baseline_mae",
+            "gates",
+            "integrity_gates",
+        } == set(evidence["decision"])
+        assert evidence["decision"]["gates"]
+        assert evidence["decision"]["integrity_gates"]
+        for model in evidence["models"].values():
+            assert model["per_year"]
+            assert model["position_slices"]
+            assert model["interval_summary"]
+
+
+@pytest.mark.parametrize("hash_field", ["training_table_sha256", "run_manifest_sha256"])
+def test_offline_publication_rejects_wrong_explicit_hashes(tmp_path, monkeypatch, hash_field):
+    config, _ = offline_publication_inputs(tmp_path)
+    monkeypatch.setattr(
+        "rookie_ranker.publication_cli._producer_commit",
+        lambda: "a222442868c81b102729563f01149f214faeb119",
+    )
+
+    with pytest.raises(PublicationInputError, match="SHA-256 does not match"):
+        publish_offline(replace(config, **{hash_field: "0" * 64}))
+
+
+def test_offline_publication_rejects_source_metadata_and_dirty_tree(tmp_path, monkeypatch):
+    config, manifest = offline_publication_inputs(tmp_path)
+    monkeypatch.setattr(
+        "rookie_ranker.publication_cli._producer_commit",
+        lambda: "a222442868c81b102729563f01149f214faeb119",
+    )
+    original_schema_hash = manifest["sources"][0]["schema"]["sha256"]
+    manifest["sources"][0]["schema"]["sha256"] = "0" * 64
+    write_manifest(manifest, config.run_manifest)
+    tampered = replace(config, run_manifest_sha256=sha256_file(config.run_manifest))
+    with pytest.raises(PublicationInputError, match="schema hash does not match"):
+        publish_offline(tampered)
+
+    manifest["sources"][0]["schema"]["sha256"] = original_schema_hash
+    manifest["sources"][0]["query_years"] = manifest["sources"][0]["query_years"][:-1]
+    write_manifest(manifest, config.run_manifest)
+    tampered = replace(config, run_manifest_sha256=sha256_file(config.run_manifest))
+    with pytest.raises(PublicationInputError, match="query years do not match"):
+        publish_offline(tampered)
+
+    manifest["sources"][0]["query_years"] = list(range(2013, 2027))
+    manifest["sources"][0]["source_version"] = "wrong"
+    write_manifest(manifest, config.run_manifest)
+    tampered = replace(config, run_manifest_sha256=sha256_file(config.run_manifest))
+    with pytest.raises(PublicationInputError, match="version must match"):
+        publish_offline(tampered)
+
+    def dirty_tree():
+        raise RuntimeError("dirty Git tree")
+
+    monkeypatch.setattr("rookie_ranker.publication_cli._producer_commit", dirty_tree)
+    with pytest.raises(RuntimeError, match="dirty Git tree"):
+        publish_offline(config)
+
+
+def test_offline_publication_stages_before_replacing_outputs(tmp_path, monkeypatch):
+    config, _ = offline_publication_inputs(tmp_path)
+    monkeypatch.setattr(
+        "rookie_ranker.publication_cli._producer_commit",
+        lambda: "a222442868c81b102729563f01149f214faeb119",
+    )
+    monkeypatch.setattr(
+        "rookie_ranker.publication_cli._audit_bytes",
+        lambda _: (_ for _ in ()).throw(ValueError("audit failed")),
+    )
+
+    with pytest.raises(ValueError, match="audit failed"):
+        publish_offline(config)
+    assert not config.output_dir.exists()
+
+
+def test_offline_publication_rolls_back_failed_bundle_promotion(tmp_path, monkeypatch):
+    config, _ = offline_publication_inputs(tmp_path)
+    monkeypatch.setattr(
+        "rookie_ranker.publication_cli._producer_commit",
+        lambda: "a222442868c81b102729563f01149f214faeb119",
+    )
+    existing = publish_offline(config)
+    before = {name: path.read_bytes() for name, path in existing.items()}
+    unrelated = config.output_dir / "keep-me.txt"
+    unrelated.write_text("unchanged\n")
+    real_replace = __import__("os").replace
+    calls = 0
+
+    def fail_second_promotion(source, destination):
+        nonlocal calls
+        calls += 1
+        if calls == 6:
+            raise OSError("promotion failed")
+        real_replace(source, destination)
+
+    monkeypatch.setattr("rookie_ranker.publication_cli.os.replace", fail_second_promotion)
+    with pytest.raises(OSError, match="promotion failed"):
+        publish_offline(config)
+
+    assert {name: path.read_bytes() for name, path in existing.items()} == before
+    assert unrelated.read_text() == "unchanged\n"
 
 
 def test_board_derives_warnings_from_identity_and_college_status():

@@ -38,6 +38,12 @@ The published board is ordered for first-season fantasy use: the selected
 rookie-year model drives overall rank, position rank, tiers, and confidence.
 Three-year forecasts remain in the handoff as secondary dynasty context.
 
+After an RR-02 build is retained privately, publish without refetching providers
+with the checked-in `rookie-ranker-publish` command documented in
+[`docs/champion-board.md`](docs/champion-board.md). Publication requires explicit
+input hashes and a clean Git commit, and writes a deterministic audit sidecar;
+the training table and raw provider data remain outside Git.
+
 ## Usage
 ```bash
 # Fetch data + train both models
