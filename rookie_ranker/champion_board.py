@@ -95,6 +95,7 @@ CURRENT_REQUIRED_COLUMNS = {
     "position",
     "identity_match_status",
     "identity_match_method",
+    "college_stats_status",
 }
 SOURCE_ID_COLUMNS = (
     "gsis_id",
@@ -720,6 +721,12 @@ def build_rookie_board(
     missing_columns = sorted(CURRENT_REQUIRED_COLUMNS.difference(current_class.columns))
     if missing_columns:
         raise ChampionBoardError(f"current class missing publication columns: {missing_columns}")
+    college_statuses = current_class["college_stats_status"].astype("string").str.strip()
+    supported_college_statuses = {"observed", "missing", "unresolved_identity"}
+    if college_statuses.isna().any() or (~college_statuses.isin(supported_college_statuses)).any():
+        raise ChampionBoardError(
+            "college_stats_status must be populated with a supported RR-02 status"
+        )
     if current_class.empty or current_class["canonical_id"].isna().any() or current_class["canonical_id"].duplicated().any():
         raise ChampionBoardError("current class canonical IDs must be populated and unique")
     numeric_picks = pd.to_numeric(current_class["overall_pick"], errors="coerce")

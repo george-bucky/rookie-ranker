@@ -386,6 +386,24 @@ def test_incomplete_or_mismatched_current_cohort_is_rejected():
     complete = current_class()
     evidence = current_evidence(complete)
 
+    with pytest.raises(ValueError, match="missing publication columns"):
+        build_rookie_board(
+            {"three_year_ppr_points": training, "rookie_year_ppr_points": training},
+            complete.drop(columns=["college_stats_status"]),
+            evidence,
+            publication_metadata(),
+        )
+
+    null_status = complete.copy()
+    null_status.loc[0, "college_stats_status"] = None
+    with pytest.raises(ValueError, match="college_stats_status must be populated"):
+        build_rookie_board(
+            {"three_year_ppr_points": training, "rookie_year_ppr_points": training},
+            null_status,
+            evidence,
+            publication_metadata(),
+        )
+
     with pytest.raises(ValueError, match="does not match expected complete cohort"):
         build_rookie_board(
             {"three_year_ppr_points": training, "rookie_year_ppr_points": training},
