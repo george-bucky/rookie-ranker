@@ -18,6 +18,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
 from .artifact_contract import (
+    NUMERIC_PRECISION,
     SCHEMA_VERSION,
     ArtifactMetadata,
     Capabilities,
@@ -690,6 +691,11 @@ def _warnings(value: Any) -> list[str]:
     return [str(item).strip() for item in value if str(item).strip()]
 
 
+def _published_number(value: Any) -> float:
+    rounded = round(float(value), NUMERIC_PRECISION)
+    return 0.0 if rounded == 0 else rounded
+
+
 def _evaluation_summary(evaluation: TargetEvaluation) -> TargetEvaluationSummary:
     champion = evaluation.decision.champion
     macro = evaluation.macro_class_ranking.set_index("model").loc[champion]
@@ -766,7 +772,7 @@ def build_rookie_board(
     ordering = pd.DataFrame(
         {
             "canonical_id": current["canonical_id"].astype(str),
-            "prediction": forecasts["three_year_ppr_points"]["p50"].to_numpy(dtype=float),
+            "prediction": forecasts["rookie_year_ppr_points"]["p50"].to_numpy(dtype=float),
         }
     ).sort_values(["prediction", "canonical_id"], ascending=[False, True], kind="stable")
     base_rank = {canonical_id: rank for rank, canonical_id in enumerate(ordering["canonical_id"], start=1)}
@@ -775,8 +781,11 @@ def build_rookie_board(
         ["position", "base_rank", "canonical_id"], kind="stable"
     ).groupby("position", sort=True).cumcount().add(1).sort_index()
 
-    three_width = forecasts["three_year_ppr_points"]["p90"] - forecasts["three_year_ppr_points"]["p10"]
-    available_widths = three_width[forecasts["three_year_ppr_points"]["interval_status"].eq("available")]
+    published_rookie_quantiles = forecasts["rookie_year_ppr_points"][["p10", "p90"]].map(
+        _published_number
+    )
+    rookie_width = published_rookie_quantiles["p90"] - published_rookie_quantiles["p10"]
+    available_widths = rookie_width[forecasts["rookie_year_ppr_points"]["interval_status"].eq("available")]
     median_width = None if available_widths.empty else float(available_widths.median())
     players = []
     for index, row in current.iterrows():
@@ -788,6 +797,7 @@ def build_rookie_board(
         college_status = _clean_optional(row.get("college_stats_status"))
         if college_status is not None and college_status != "observed":
             warnings.append(f"college stats status: {college_status}")
+        has_data_quality_warnings = bool(warnings)
         unavailable_targets = [
             target
             for target in TARGETS
@@ -795,11 +805,11 @@ def build_rookie_board(
         ]
         warnings.extend(f"{target} interval unavailable" for target in unavailable_targets)
         warnings = sorted(set(warnings))
-        if unavailable_targets:
+        if "rookie_year_ppr_points" in unavailable_targets:
             confidence = "unavailable"
-        elif warnings:
+        elif has_data_quality_warnings:
             confidence = "low"
-        elif median_width is not None and float(three_width.at[index]) <= median_width:
+        elif median_width is not None and float(rookie_width.at[index]) <= median_width:
             confidence = "high"
         else:
             confidence = "medium"

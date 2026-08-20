@@ -301,7 +301,7 @@ def test_interval_metrics_report_only_measured_held_out_rows():
     assert overall["mean_interval_width"] == 4.5
 
 
-def test_board_publication_is_valid_deterministic_and_ordered_by_three_year(tmp_path):
+def test_board_publication_is_valid_deterministic_and_ordered_by_rookie_year(tmp_path):
     training = feature_rows()
     position_bonus = training["position"].map({"QB": 4.0, "RB": 3.0, "WR": 2.0, "TE": 1.0})
     training["rookie_year_ppr_points"] = (
@@ -320,8 +320,8 @@ def test_board_publication_is_valid_deterministic_and_ordered_by_three_year(tmp_
     assert board.metadata.champion_by_target.rookie_year_ppr_points == "draft_capital"
     ordered = sorted(board.players, key=lambda player: player.base_rank)
     assert [player.base_rank for player in ordered] == list(range(1, len(ordered) + 1))
-    assert [player.three_year_ppr.p50 for player in ordered] == sorted(
-        [player.three_year_ppr.p50 for player in ordered], reverse=True
+    assert [player.rookie_year_ppr.p50 for player in ordered] == sorted(
+        [player.rookie_year_ppr.p50 for player in ordered], reverse=True
     )
     assert all(player.tier == 1 for player in board.players)
     assert all(player.champion_by_target == board.metadata.champion_by_target for player in board.players)
@@ -351,6 +351,126 @@ def test_board_publication_is_valid_deterministic_and_ordered_by_three_year(tmp_
     assert [player.canonical_id for player in validated.players] == [
         player.canonical_id for player in ordered
     ]
+
+
+def test_rookie_year_forecast_drives_rank_tiers_and_confidence(monkeypatch):
+    training = feature_rows()
+    current = feature_rows(years=[2026], players_per_year=13).drop(
+        columns=[
+            "three_year_ppr_points",
+            "three_year_target_status",
+            "rookie_year_ppr_points",
+            "rookie_target_status",
+            "data_quality_warnings",
+        ]
+    )
+    current["identity_match_status"] = "exact"
+    current["identity_match_method"] = "normalized_name_position"
+    rookie_points = np.arange(13, dtype=float)
+    three_year_points = rookie_points[::-1]
+
+    def forecasts(_training, supplied_current, evaluation):
+        if evaluation.target == "rookie_year_ppr_points":
+            points = rookie_points
+            widths = np.array([2.0] * 7 + [20.0] * 6)
+        else:
+            points = three_year_points
+            widths = np.array([100.0] * 7 + [1.0] * 6)
+        interval_status = ["available"] * len(points)
+        if evaluation.target == "three_year_ppr_points":
+            interval_status[0] = "unavailable"
+        return pd.DataFrame(
+            {
+                "p10": points - widths / 2,
+                "p50": points,
+                "p90": points + widths / 2,
+                "interval_status": interval_status,
+            },
+            index=supplied_current.index,
+        )
+
+    monkeypatch.setattr("rookie_ranker.champion_board.fit_selected_target", forecasts)
+    board, _ = build_rookie_board(
+        {"three_year_ppr_points": training, "rookie_year_ppr_points": training},
+        current,
+        current_evidence(current),
+        publication_metadata(),
+    )
+    ordered = sorted(board.players, key=lambda player: player.base_rank)
+
+    assert [player.canonical_id for player in ordered] == list(
+        reversed(current["canonical_id"].astype(str).tolist())
+    )
+    assert [player.rookie_year_ppr.p50 for player in ordered] == sorted(
+        rookie_points, reverse=True
+    )
+    assert [player.three_year_ppr.p50 for player in ordered] == sorted(three_year_points)
+    assert ordered[0].tier == 1
+    assert ordered[11].tier == 1
+    assert ordered[12].tier == 2
+    quarterbacks = [player for player in ordered if player.position == "QB"]
+    assert [player.position_rank for player in quarterbacks] == [1, 2, 3, 4]
+    assert [player.canonical_id for player in quarterbacks] == [
+        str(current.loc[index, "canonical_id"]) for index in (12, 8, 4, 0)
+    ]
+    by_id = {player.canonical_id: player for player in board.players}
+    assert by_id[str(current.loc[0, "canonical_id"])].confidence == "high"
+    assert "three_year_ppr_points interval unavailable" in by_id[
+        str(current.loc[0, "canonical_id"])
+    ].data_quality_warnings
+    assert by_id[str(current.loc[12, "canonical_id"])].confidence == "medium"
+
+
+def test_confidence_uses_published_quantiles_at_median_boundary(tmp_path, monkeypatch):
+    training = feature_rows()
+    current = current_class().iloc[:3].copy().drop(columns=["data_quality_warnings"])
+    current["identity_match_status"] = "exact"
+    current["identity_match_method"] = "normalized_name_position"
+    raw_widths = np.array([1.00001, 1.00002, 1.00003])
+
+    def forecasts(_training, supplied_current, evaluation):
+        widths = (
+            raw_widths
+            if evaluation.target == "rookie_year_ppr_points"
+            else np.ones(len(supplied_current))
+        )
+        return pd.DataFrame(
+            {
+                "p10": np.zeros(len(supplied_current)),
+                "p50": np.full(len(supplied_current), 0.5),
+                "p90": widths,
+                "interval_status": "available",
+            },
+            index=supplied_current.index,
+        )
+
+    monkeypatch.setattr("rookie_ranker.champion_board.fit_selected_target", forecasts)
+    paths = publish_rookie_board(
+        {"three_year_ppr_points": training, "rookie_year_ppr_points": training},
+        current,
+        current_evidence(current),
+        publication_metadata(),
+        tmp_path,
+    )
+    published = load_handoff(
+        paths["artifact"], paths["manifest"], schema_path=paths["schema"]
+    )
+    published_widths = {
+        player.canonical_id: player.rookie_year_ppr.p90 - player.rookie_year_ppr.p10
+        for player in published.players
+    }
+    published_median = float(np.median(list(published_widths.values())))
+    boundary_id = str(current.loc[2, "canonical_id"])
+    boundary = next(player for player in published.players if player.canonical_id == boundary_id)
+
+    assert raw_widths[2] > float(np.median(raw_widths))
+    assert published_widths[boundary_id] == published_median
+    assert boundary.confidence == "high"
+    assert all(
+        player.confidence
+        == ("high" if published_widths[player.canonical_id] <= published_median else "medium")
+        for player in published.players
+    )
 
 
 def test_board_derives_warnings_from_identity_and_college_status():

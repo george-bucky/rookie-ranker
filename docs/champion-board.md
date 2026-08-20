@@ -38,7 +38,9 @@ For each target, Random Forest is selected only when all four conditions pass:
    are rejected.
 
 A loss or tie publishes draft capital for that target. Mixed champions are
-valid. Overall rank and tier always use the selected three-year PPR P50 only.
+valid. For the personal-use board, overall rank and tier always use the selected
+rookie-year PPR P50 only. The three-year forecast remains available as secondary
+information and does not change the published order.
 
 ## Residual intervals and claims
 
@@ -52,19 +54,24 @@ fold.
 Coverage and mean width include only held-out rows with available intervals.
 Unavailable evidence is emitted as `null` in the artifact evaluation summary,
 not described as calibrated. A current-class player without enough residual
-history receives a collapsed P10/P50/P90 at the point prediction, confidence
-`unavailable`, and a target-specific warning.
+history receives a collapsed P10/P50/P90 at the point prediction and a
+target-specific warning. Missing rookie-year residual history makes first-year
+confidence `unavailable`; missing three-year history does not.
 
 ## Frozen rank, tier, and confidence rules
 
-- Base rank: selected three-year P50 descending, then `canonical_id` ascending.
+- Base rank: selected rookie-year P50 descending, then `canonical_id` ascending.
 - Position rank: base-rank order within position.
 - Tier: `1 + floor((base_rank - 1) / 12)`; each consecutive block of 12 ranks is
   one tier.
-- Confidence: `unavailable` if either target interval is unavailable; otherwise
-  `low` when any data-quality warning exists; otherwise `high` when the
-  three-year interval width is no wider than the current class median and
-  `medium` when it is wider.
+- Confidence: `unavailable` if the rookie-year interval is unavailable;
+  otherwise `low` when an identity or college-data warning exists; otherwise
+  `high` when the rookie-year interval width is no wider than the current class
+  median and `medium` when it is wider. A secondary three-year interval warning
+  remains visible but does not lower first-year confidence. Widths and the
+  median are calculated after P10 and P90 are rounded to the artifact's
+  four-decimal numeric precision, so confidence is reproducible from the
+  published values.
 
 `publish_rookie_board` writes only the RR-04 schema, deterministic JSON board,
 and external checksum manifest. It does not fetch live data, serialize a model,

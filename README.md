@@ -34,6 +34,10 @@ The validated 2026 post-draft handoff is published under
 derived predictions, the public schema, and an external checksum manifest; raw
 provider responses and credentials are not committed.
 
+The published board is ordered for first-season fantasy use: the selected
+rookie-year model drives overall rank, position rank, tiers, and confidence.
+Three-year forecasts remain in the handoff as secondary dynasty context.
+
 ## Usage
 ```bash
 # Fetch data + train both models
