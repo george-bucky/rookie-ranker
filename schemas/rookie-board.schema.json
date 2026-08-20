@@ -1,0 +1,234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/george-bucky/rookie-ranker/schemas/rookie-board.schema.json",
+  "x-schema-version": "1.0.0",
+  "title": "Rookie Board",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "players"],
+  "properties": {
+    "metadata": {"$ref": "#/$defs/artifactMetadata"},
+    "players": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/rookiePlayer"}
+    }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "champion": {
+      "type": "string",
+      "enum": ["draft_capital", "random_forest"]
+    },
+    "championByTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["three_year_ppr_points", "rookie_year_ppr_points"],
+      "properties": {
+        "three_year_ppr_points": {"$ref": "#/$defs/champion"},
+        "rookie_year_ppr_points": {"$ref": "#/$defs/champion"}
+      }
+    },
+    "predictionQuantiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["p10", "p50", "p90"],
+      "properties": {
+        "p10": {"type": "number"},
+        "p50": {"type": "number"},
+        "p90": {"type": "number"}
+      }
+    },
+    "verifiedSourceIds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gsis_id": {"type": ["string", "null"], "minLength": 1},
+        "pfr_player_id": {"type": ["string", "null"], "minLength": 1},
+        "cfb_player_id": {"type": ["string", "null"], "minLength": 1},
+        "cfbd_player_id": {"type": ["string", "null"], "minLength": 1},
+        "yahoo_id": {"type": ["string", "null"], "minLength": 1},
+        "sleeper_id": {"type": ["string", "null"], "minLength": 1}
+      }
+    },
+    "targetDefinitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["three_year_ppr_points", "rookie_year_ppr_points"],
+      "properties": {
+        "three_year_ppr_points": {"type": "string", "minLength": 1},
+        "rookie_year_ppr_points": {"type": "string", "minLength": 1}
+      }
+    },
+    "trainingCohorts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["three_year_ppr_points", "rookie_year_ppr_points"],
+      "properties": {
+        "three_year_ppr_points": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "integer"}
+        },
+        "rookie_year_ppr_points": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "integer"}
+        }
+      }
+    },
+    "targetMaturity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["three_year_ppr_points", "rookie_year_ppr_points"],
+      "properties": {
+        "three_year_ppr_points": {"type": "integer", "minimum": 1936, "maximum": 2200},
+        "rookie_year_ppr_points": {"type": "integer", "minimum": 1936, "maximum": 2200}
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["three_year_predictions", "rookie_year_predictions", "prediction_intervals", "interval_level"],
+      "properties": {
+        "three_year_predictions": {"type": "boolean"},
+        "rookie_year_predictions": {"type": "boolean"},
+        "prediction_intervals": {"type": "boolean"},
+        "interval_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1}
+      }
+    },
+    "targetEvaluationSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selected_champion", "eligible_held_out_classes", "ndcg_at_24", "mae", "interval_coverage", "mean_interval_width"],
+      "properties": {
+        "selected_champion": {"$ref": "#/$defs/champion"},
+        "eligible_held_out_classes": {"type": "integer", "minimum": 0},
+        "ndcg_at_24": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "mae": {"type": ["number", "null"], "minimum": 0},
+        "interval_coverage": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "mean_interval_width": {"type": ["number", "null"], "minimum": 0}
+      }
+    },
+    "evaluationSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["three_year_ppr_points", "rookie_year_ppr_points"],
+      "properties": {
+        "three_year_ppr_points": {"$ref": "#/$defs/targetEvaluationSummary"},
+        "rookie_year_ppr_points": {"$ref": "#/$defs/targetEvaluationSummary"}
+      }
+    },
+    "sourceNotice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "url", "license", "notice"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "url": {"type": "string", "minLength": 1},
+        "license": {"type": "string", "minLength": 1},
+        "notice": {"type": "string", "minLength": 1},
+        "version": {"type": ["string", "null"]}
+      }
+    },
+    "artifactMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "artifact_version",
+        "model_version",
+        "producer_commit",
+        "draft_class",
+        "mode",
+        "draft_event_date",
+        "generated_at",
+        "data_cutoff",
+        "outcomes_cutoff_season",
+        "scoring_basis",
+        "target_definitions",
+        "target_maturity",
+        "training_cohorts",
+        "champion_by_target",
+        "capabilities",
+        "evaluation_summary",
+        "source_notices"
+      ],
+      "properties": {
+        "schema_version": {"$ref": "#/$defs/semver"},
+        "artifact_version": {"$ref": "#/$defs/semver"},
+        "model_version": {"type": "string", "minLength": 1},
+        "producer_commit": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"},
+        "draft_class": {"type": "integer", "minimum": 1936, "maximum": 2200},
+        "mode": {"const": "post_draft"},
+        "draft_event_date": {"type": "string", "format": "date"},
+        "generated_at": {"type": "string", "format": "date-time"},
+        "data_cutoff": {"type": "string", "format": "date"},
+        "outcomes_cutoff_season": {"type": "integer", "minimum": 1936, "maximum": 2200},
+        "scoring_basis": {"const": "ppr"},
+        "target_definitions": {"$ref": "#/$defs/targetDefinitions"},
+        "target_maturity": {"$ref": "#/$defs/targetMaturity"},
+        "training_cohorts": {"$ref": "#/$defs/trainingCohorts"},
+        "champion_by_target": {"$ref": "#/$defs/championByTarget"},
+        "capabilities": {"$ref": "#/$defs/capabilities"},
+        "evaluation_summary": {"$ref": "#/$defs/evaluationSummary"},
+        "source_notices": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/sourceNotice"}
+        }
+      }
+    },
+    "rookiePlayer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_id",
+        "source_ids",
+        "name",
+        "position",
+        "nfl_team",
+        "round",
+        "overall_pick",
+        "base_rank",
+        "position_rank",
+        "tier",
+        "three_year_ppr",
+        "rookie_year_ppr",
+        "confidence",
+        "data_quality_warnings",
+        "identity_match_method",
+        "identity_match_status",
+        "champion_by_target"
+      ],
+      "properties": {
+        "canonical_id": {"type": "string", "minLength": 1},
+        "source_ids": {"$ref": "#/$defs/verifiedSourceIds"},
+        "name": {"type": "string", "minLength": 1},
+        "position": {"type": "string", "enum": ["QB", "RB", "WR", "TE"]},
+        "nfl_team": {"type": "string", "minLength": 1},
+        "round": {"type": "integer", "minimum": 1, "maximum": 7},
+        "overall_pick": {"type": "integer", "minimum": 1, "maximum": 400},
+        "base_rank": {"type": "integer", "minimum": 1},
+        "position_rank": {"type": "integer", "minimum": 1},
+        "tier": {"type": "integer", "minimum": 1},
+        "three_year_ppr": {"$ref": "#/$defs/predictionQuantiles"},
+        "rookie_year_ppr": {"$ref": "#/$defs/predictionQuantiles"},
+        "confidence": {"type": "string", "enum": ["high", "medium", "low", "unavailable"]},
+        "data_quality_warnings": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "identity_match_method": {"type": "string", "enum": ["normalized_name_position", "override", "none"]},
+        "identity_match_status": {"type": "string", "enum": ["exact", "override", "quarantined"]},
+        "champion_by_target": {"$ref": "#/$defs/championByTarget"}
+      }
+    }
+  }
+}
